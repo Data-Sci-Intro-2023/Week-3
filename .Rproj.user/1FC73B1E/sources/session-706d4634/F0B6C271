@@ -1,0 +1,33 @@
+{
+    "id": "F0B6C271",
+    "path": "~/0_my_git/Week-3-Iterations/apis-and-functions.Rmd",
+    "project_path": "apis-and-functions.Rmd",
+    "type": "r_markdown",
+    "hash": "2922288228",
+    "contents": "",
+    "dirty": false,
+    "created": 1673364823523.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "36,6",
+        "scrollLine": "8",
+        "rmdVisualMode": "false",
+        "rmdVisualCollapsedChunks": "",
+        "rmdVisualModeLocation": "5621:2362",
+        "last_setup_crc32": "706d46349332e9f9",
+        "rmdVisualWrapConfigured": "true",
+        "docOutlineVisible": "1",
+        "docOutlineSize": "197"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1673392001,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1673392001,
+    "read_only": false,
+    "read_only_alternatives": []
+}
