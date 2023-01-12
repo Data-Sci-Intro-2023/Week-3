@@ -1,0 +1,203 @@
+---
+title: "3.2: Data Munging"
+author: "Katie Willi"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Lesson Objectives
+
+In the last lesson, we learned how to pull data from an API and reduce redundancies in our workflows through functions and iterations. In this lesson we will use the data pulled in the previous lesson to learn how to manipulate data frames with the `tidyverse`, plot elegant time series graphs in ggplot() and dygraphs, and ____.
+
+There are _____ excercises in this lesson.
+
+## Pulling in necessary data sets
+
+```{r}
+# includes the tidyverse, rmarkdown, httr, and jsonlite
+source("setup.R") 
+```
+
+Using the `parkwide_visitation()` function from the last lesson and mapping, pull parkwide visitor data from 1980-2022. Name the final object `parkwide`. (Hint: use `1980:2022` to create a vector of years so you don't have to write each year out!)
+
+```{r}
+parkwide_visitation <- function(year){
+
+raw_data <- httr::GET(url = 
+          
+                        paste0("https://irmaservices.nps.gov/v3/rest/stats/total/", year))
+
+extracted_data <- httr::content(raw_data, as = "text", encoding = "UTF-8") 
+
+final_data <- jsonlite::fromJSON(extracted_data)
+
+return(final_data)
+
+}
+
+years <- (1980:2022)
+
+parkwide <- years %>% map(~ parkwide_visitation(year = .)) %>% bind_rows()
+
+```
+
+Using the `unit_visitation()` function from the last lesson and mapping, pull visitor data from 1980-2022 for Rocky Mountain National Park (ROMO), Everglades National Park  (EVER), and Theodore Roosevelt National Park (THRO). Name the final output `units`
+
+```{r}
+unit_visitation <- function(park, start_month = "01", start_year, end_month = "12", end_year){
+  
+  raw_data <- httr::GET(url = paste0("https://irmaservices.nps.gov/v3/rest/stats/visitation?unitCodes=", park,
+                                   "&startMonth=", start_month, 
+                                   "&startYear=", start_year,
+                                   "&endMonth=", end_month,
+                                   "&endYear=", end_year))
+
+# convert content to text
+extracted_data <- httr::content(raw_data, as = "text", encoding = "UTF-8") 
+
+# parse text from JSON to data frame
+final_data <- jsonlite::fromJSON(extracted_data)
+
+return(final_data)
+
+}
+
+parks <- c("ROMO", "EVER", "THRO", "YELL", "GRCA", "SHEN", "GRBA", "BIBE")
+
+units <- parks %>% map(~ unit_visitation(park = ., start_year = '1980', end_year = '2022')) %>%
+  bind_rows()
+```
+
+## Exploring our data
+
+Look at the data frame structure of `parkwide` and `units`; they're exactly the same! So let's go ahead and bind those together:
+
+```{r}
+visitation <- bind_rows(parkwide, units)
+```
+
+Except, the rows in `parkwide`'s UnitCode and UnitCode columns are empty. Let's fix the `UnitCode` column to list "Parkwide" using `mutate()` and an `ifelse()` statement:
+
+```{r}
+visitation <- visitation %>% mutate(UnitCode = ifelse(is.na(UnitCode), "Parkwide", UnitCode))
+```
+
+Think of the above `ifelse()` operation as: *"If the column `UnitCode` is `NA`, replace `NA` with `Parkwide`. Otherwise, preserve what is already in the `UnitCode` column."*
+
+Now that we have a single data set of all of the park visitation data that we've pulled, let's start exploring it! But first, let's aggregate the monthly data into annual data using `group_by()` and `summarize()`:
+
+```{r}
+yearly <- visitation %>%
+  group_by(UnitCode, Year) %>% 
+  summarize(TotalVisitation = sum(RecreationVisitors))
+
+head(yearly)
+```
+
+What does visitation data look like through time? First we can try to graph all of the park units together:
+
+```{r}
+ggplot(data=yearly)+
+  geom_point(aes(x = Year, y = TotalVisitation, color = UnitCode)) +
+  geom_path(aes(x = Year, y = TotalVisitation, color = UnitCode))
+```
+
+... yikes, not surprisingly, parkwide visitation is wayyyy higher than our individual unit's visitation data. It might be nice to have one plot for the parkwide data, with the three park units in a graph of their own. 
+
+We can create individual graphs for each unit using `facet_wrap()`, and set the y-axes for each plot to "free_y":
+
+```{r}
+ggplot(data=yearly) +
+  geom_point(aes(x = Year, y = TotalVisitation, color = UnitCode)) +
+  geom_path(aes(x = Year, y = TotalVisitation, color = UnitCode)) +
+  facet_wrap(~UnitCode, scales = "free_y")
+```
+
+What does `scales = "free_y"` do to our graph? Look up `facet_wrap()` arguments by typing `?facet_wrap` in your console.
+
+
+# Exercise #1
+
+Create a single `ggplot()` with two separate panes: one showing parkwide visitation, the other showing all the park units together. Both panes should have different y-axes. (Hint: tweak `yearly` data to `facet_wrap()` by a new variable.)
+
+```{r}
+yearly <- yearly %>%
+  mutate(group = ifelse(UnitCode == "Parkwide", "Parkwide","Unit"))
+
+ggplot(data=yearly)+
+  geom_point(aes(x = Year, y = TotalVisitation, color = UnitCode)) +
+  geom_path(aes(x = Year, y = TotalVisitation, color = UnitCode)) +
+  facet_wrap(~group, scales = "free_y")
+```
+
+It is pretty clear that ROMO gets orders of magnitude more visitors than the other two parks. But just how much of the *total* park visitation do each of these parks account for from year to year? Here we walk through two methods to tackle this question: **pivoting** and **joining**.
+
+## Pivoting
+
+Currently, our yearly data is considered "narrow" because we have all of our park units in one column, with multiple rows representing the same year. We can make this data "wide" by using the function `pivot_wider()`
+
+```{r}
+wide_data <- yearly %>%
+  select(Year, UnitCode, TotalVisitation) %>%
+  pivot_wider(., names_from = UnitCode, values_from = TotalVisitation)
+```
+
+... where `names_from` represents the column with the values you are hoping to spread into new columns, and `values_from` represents the data you want to fill these new columns with.
+
+We can make the data set "narrow" again by using the function `pivot_longer()`:
+
+```{r}
+narrow_data <- wide_data %>%
+  pivot_longer(cols = -Year,
+               names_to = "Park",
+               values_to = "TotalVisitation")
+```
+
+... where `cols` are the columns we want to gather into one column (or often, the column(s) you DON'T want to gather), `names_to` and `values_to` are the names of the new columns produced from the pivot.
+
+### Exercise #2:
+
+Using `wide_data` as the starting point, create an annual time series plot showing the percentage of the total visitation made up by all park units. ROMO, EVER, and THRO.
+
+```{r}
+fracts <- wide_data %>%
+  # GO OVER THIS IN VIDEO... BASICALLY THEY WILL GET THE ANSWER IF THEY PAID ATTENTION TO THE VIDEO.
+  mutate_at(.vars = parks, .funs = ~ (./Parkwide)*100) %>%
+  pivot_longer(cols = -c(Parkwide,Year), names_to = "Park", values_to = "Percentage")
+
+ggplot(fracts) +
+  geom_line(aes(x=Year, y=Percentage, color = Park))
+```
+
+## Joining 
+
+Another way of getting parkwide visitation side-by-side with the unit data is through the use of joining our original `units` and `parkwide` data sets:
+
+```{r}
+joined_data <- inner_join(x = units, y = parkwide, by = c("Year","Month"))
+```
+
+... where `x` and `y` are the two data sets you want joined, and `by` indicates the column(s) to match them by. Note: there are several ways of joining data, all of which are detailed in the ____. 
+
+### Exercise #3:
+
+Using `joined_data` as the starting point, create an annual time series plot showing the percentage of the total visitation that is made up by ROMO, EVER, and THRO.
+
+```{r}
+fracts <- joined_data %>%
+  group_by(Year, UnitCode.x) %>%
+  summarize(ParkVisitors = sum(RecreationVisitors.x),
+            TotalVisitors = sum(RecreationVisitors.y)) %>%
+  mutate(Percentage = (ParkVisitors/TotalVisitors) * 100)
+
+ggplot(fracts) +
+  geom_line(aes(x=Year, y=Percentage, color = UnitCode.x))
+
+```
+
+
+
