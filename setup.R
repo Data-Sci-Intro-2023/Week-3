@@ -17,7 +17,9 @@ packageLoad <-
 packages <- c('tidyverse',
               'rmarkdown',
               'httr',
-              'jsonlite')
+              'jsonlite',
+              'scales',
+              'plotly')
 
 packageLoad(packages)
 
