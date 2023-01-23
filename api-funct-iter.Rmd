@@ -36,7 +36,7 @@ For starters, let's try accessing the **total/{year}**. This data set gives us t
 
 [**https://irmaservices.nps.gov/v3/rest/stats/total/{YEAR}**](https://irmaservices.nps.gov/v3/rest/stats/total/%7BYEAR%7D){.uri}
 
-The curly brackets {} signify locations in the URL that need to be updated by the user based on their specific needs. I'm curious about visitor use in my birth year, so let's tweak the URL to access visitation data from 1992. In R, we can access this data using `httr`'s `GET()` function, replacing {YEAR} with 1992.
+If you tried accessing that URL, you'll have noticed it doesn't take you anywhere. This is because the curly brackets {} signify locations in the URL that need to be updated by the user based on their specific needs. I'm curious about visitor use in my birth year, so let's tweak the URL to access visitation data from 1992. In R, we can access this data using `httr`'s `GET()` function, replacing {YEAR} with 1992.
 
 ```{r}
 raw_data <- httr::GET(url = "https://irmaservices.nps.gov/v3/rest/stats/total/1992")
