@@ -19,7 +19,8 @@ packages <- c('tidyverse',
               'httr',
               'jsonlite',
               'scales',
-              'plotly')
+              'plotly',
+              'dataRetrieval')
 
 packageLoad(packages)
 
