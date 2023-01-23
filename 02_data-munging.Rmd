@@ -43,7 +43,9 @@ return(final_data)
 
 years <- (1980:2021)
 
-parkwide <- years %>% map(~ parkwide_visitation(year = .)) %>% bind_rows()
+parkwide <- years %>% 
+  map(~ parkwide_visitation(year = .)) %>% 
+  bind_rows()
 ```
 
 ### Exercise #1 {style="color: maroon"}
