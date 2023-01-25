@@ -9,20 +9,33 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo=TRUE, eval=TRUE, message=FALSE, warning=FALSE, rows.print=5, fig.width=9)
-
-# includes the tidyverse, rmarkdown, httr, and jsonlite
-source("setup.R") 
 ```
 
 ## Lesson Objectives:
 
-In this lesson you will take all of the skills you have learned up to this point and use them on a completely new set of data. This lesson has five exercises that need to be completed.
+In this lesson you will take all of the skills you have learned up to this point and use them on a completely new set of data. This lesson has **five exercises** that need to be completed.
+
+#### Necessary packages:
+
+```{r}
+library(tidyverse)
+library(plotly)
+library(scales)
+library(httr)
+library(jsonlite)
+library(dataRetrieval)
+library(sf) # for the map
+library(mapview) # for making the interactive plot
+```
+
+## Streaflow Datasets
 
 We are interested in looking at how the Cache la Poudre River's flow changes as it travels out of the mountainous Poudre Canyon and through Fort Collins.
 
 There are four stream flow monitoring sites on the Poudre that we are interested in: two managed by the US Geological Survey (USGS), and two managed by the Colorado Division of Water Resources (CDWR):
 
-```{r}
+```{r, echo = F}
+# Making a tibble to convert into coordinates for our sites
 poudre_sites <- tibble(site = c("Canyon Mouth", "Lincoln Bridge", "Environmental Learning Center", "Below Fossil Creek Reservoir"),
                        site_no = c("CLAFTCCO", "06752260", "06752280", "CLARIVCO"),
                        lat = c(40.6645, 40.5880833, 40.5519269, 40.5013),
@@ -30,6 +43,7 @@ poudre_sites <- tibble(site = c("Canyon Mouth", "Lincoln Bridge", "Environmental
                        source = c("CDWR", "USGS", "USGS", "CDWR")) %>%
   sf::st_as_sf(coords = c("long", "lat"), crs = 4269)
 
+# Mapview is another package that creates interactive plots, not necessary for you to know yet!
 mapview::mapview(poudre_sites, zcol = "site_no", layer.name = "Poudre River Monitoring")
 ```
 
@@ -55,95 +69,44 @@ Alas, CDWR does NOT have an R package that pulls data from [their API](https://d
 
 Using the "URL generator" steps outlined for their [daily surface water time series data set](https://dwr.state.co.us/Rest/GET/Help/SurfaceWaterTSDayGenerator), we can get the last two water years of CFS data for the Poudre at the Canyon mouth (site abbreviation = CLAFTCCO) using the following URL:
 
-[https://dwr.state.co.us/Rest/GET/api/v2/surfacewater/surfacewatertsday/?format=json&dateFormat=dateOnly&fields=abbrev%2CmeasDate%2Cvalue%2CmeasUnit&encoding=deflate&abbrev=CLAFTCCO&min-measDate=10%2F01%2F2020&max-measDate=09%2F30%2F2022](https://dwr.state.co.us/Rest/GET/api/v2/surfacewater/surfacewatertsday/?format=json&dateFormat=dateOnly&fields=abbrev%2CmeasDate%2Cvalue%2CmeasUnit&encoding=deflate&abbrev=CLAFTCCO&min-measDate=10%2F01%2F2020&max-measDate=09%2F30%2F2022)
+<https://dwr.state.co.us/Rest/GET/api/v2/surfacewater/surfacewatertsday/?format=json&dateFormat=dateOnly&fields=abbrev%2CmeasDate%2Cvalue%2CmeasUnit&encoding=deflate&abbrev=CLAFTCCO&min-measDate=10%2F01%2F2020&max-measDate=09%2F30%2F2022>
 
 # Exercise #1 {style="color: maroon"}
 
 Using the URL above as the starting point, develop a function that creates a data frame of CDWR daily flow (CFS) data for a selected range of water years, for any site. (HINT: The final product of our API pull is a list with additional metadata about our API pull... how do we index a list to extract the time series flow data?)
 
 ```{r}
-co_water_data <- function(site, start_year, end_year){
-  
-  raw_data <- httr::GET(url = paste0("https://dwr.state.co.us/Rest/GET/api/v2/surfacewater/surfacewatertsday/?format=json&dateFormat=dateOnly&fields=abbrev%2CmeasDate%2Cvalue%2CmeasUnit&encoding=deflate&abbrev=",site,
-                                     "&min-measDate=10%2F01%2F", start_year - 1,
-                                     "&max-measDate=09%2F30%2F", end_year))
 
-  extracted_data <- httr::content(raw_data, as = "text", encoding = "UTF-8") 
-
-  # parse text from JSON to data frame
-  final_data <- jsonlite::fromJSON(extracted_data)[["ResultList"]]
-  
-  return(final_data)
-
-}
-
-# cdwr <- co_water_data(site="CLAFTCCO", start_year = 2021, end_year = 2022) %>%
-#   rename(q_cfs = value) %>%
-#   mutate(Date = lubridate::ymd(measDate),
-#          Site = "Canyon")
 ```
 
 # Exercise #2 {style="color: maroon"}
 
-Map over the function you developed in exercise #1 to pull flow data for CLAFTCCO and CLARIVCO for the 2021 and 2022 water years.
+Map over the function you developed in Exercise #1 to pull flow data for CLAFTCCO and CLARIVCO for the 2021 and 2022 water years.
 
 ```{r}
-sites <- c("CLAFTCCO","CLARIVCO")
 
-cdwr <- sites %>% map(~ co_water_data(site = ., start_year = 2021, end_year = 2022)) %>%
-  bind_rows() %>%
-  rename(q_cfs = value) %>%
-  mutate(Date = lubridate::ymd(measDate),
-         Site = ifelse(abbrev == "CLAFTCCO", "Canyon",
-                       "Timnath"))
 ```
 
 # Exercise #3 {style="color: maroon"}
 
-Join our USGS and CDWR data frames together, then create an interactive ggplot of discharge (in CFS) through time displaying all of our monitoring sites. (Be sure all axes and labels are clear!)
+Join our USGS and CDWR data frames together (`bind_rows()`, perhaps?), then create an interactive ggplot of discharge (in CFS) through time displaying all four of our monitoring sites. Be sure all axes and labels are clear.
 
 ```{r}
-data <- bind_rows(usgs,cdwr)
-
-plotly::ggplotly(ggplot(data = data) +
-  geom_line(aes(x=Date, y=q_cfs, color = Site)) +
-  theme_bw() +
-  facet_wrap(~Site, ncol=1)
-  )
-
-# OR #
-
-plotly::ggplotly(ggplot(data = data) +
-  geom_line(aes(x=Date, y=q_cfs, color = Site)) +
-  theme_bw()
-  )
 
 ```
 
 # Exercise #4 {style="color: maroon"}
 
-Create an interactive plot of the daily difference in discharge between the Cache la Poudre River at the canyon mouth and each of the sites downstream. (Make sure plot axes are clear.)
+Create an interactive plot of the daily difference in discharge between the Cache la Poudre River at the canyon mouth and each of the sites downstream. Make sure your plot axes are clear.
 
 ```{r}
-new_data <- data %>%
-  select(Site, Date, q_cfs) %>%
-  pivot_wider(., names_from = Site, values_from = q_cfs) %>%
-  mutate_at(.vars = c("Boxelder","Lincoln","Timnath"), .funs = ~ (Canyon - .)) %>%
-  pivot_longer(-c(Canyon,Date))
-  
-plotly::ggplotly(ggplot(data = new_data) +
-  geom_line(aes(x = Date, y = value, color = name)) +
-  theme_bw() +
-  ylab("")
-  )
+
 ```
 
 # Exercise #5 {style="color: maroon"}
 
-For each of our downstream locations, calculate how many days the canyon had lower flow over the two years. Is this what you expected? Why or why not? 
+For each of our downstream locations, calculate how many days the canyon mouth had LOWER flow. Is this what you expected? Why or why not?
 
 ```{r}
-new_data %>% filter(value < 0) %>%
-  group_by(name) %>%
-  summarize(count=n())
+
 ```
