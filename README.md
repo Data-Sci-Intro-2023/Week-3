@@ -7,7 +7,7 @@ This week, you will be learning how to pull in online datasets through the use o
 
 ## **Assignment** 
 
-There are R Markdown lessons (01_api-funct-iter, 02_data_munging, 03_denouement) that must be completed by the due date. The videos highlight concepts found in each lesson as follows:
+There are three R Markdown lessons (01_api-funct-iter, 02_data_munging, 03_denouement) that must be completed by the due date. The videos highlight concepts found in each lesson as follows:
 
 **01_api-funct-iter**: *Lesson 3.1.1 - APIs*; *Lesson 3.1.2 - Functions*; *Lesson 3.1.3 - Iterations*
 
@@ -15,6 +15,6 @@ There are R Markdown lessons (01_api-funct-iter, 02_data_munging, 03_denouement)
 
 **03_denouement**: *Lesson 3.3 - Testing New Skills*
 
-Submit the assignments for peer review by the end of **Friday, 2/3**.
+Fill out and submit all three .RMD assignments for peer review by the end of **Wednesday, 2/8**.
 
 Happy coding! :-)
