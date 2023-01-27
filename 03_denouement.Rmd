@@ -3,7 +3,7 @@ title: "Lesson 3.3: USGS Streamflow"
 author: "Katie Willi"
 date: "`r Sys.Date()`"
 output: 
-  html_document:
+  github_document:
     df_print: paged
 ---
 
